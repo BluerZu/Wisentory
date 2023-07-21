@@ -32,3 +32,10 @@ Select * From OrderDetail;
 Select * From Bills;
 
 Select * From BillDetail;
+
+SELECT  C.Id AS NumeroCliente,CONCAT(C.[Name], ' ', C.[LastName]) AS NombreCompleto, SUM(B.Total) AS TotalFacturas
+FROM Clients C
+LEFT JOIN Bills B ON C.Id = B.ClientId
+GROUP BY CONCAT(C.[Name], ' ', C.[LastName]), C.Id
+ORDER BY TotalFacturas DESC;
+

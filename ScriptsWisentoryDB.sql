@@ -9,13 +9,14 @@ GRANT CONNECT SQL TO WFDB;
 
 --Asignamos los permisos al usuario.
 GRANT SELECT, INSERT, UPDATE, DELETE ON SCHEMA::dbo TO WisentoryManager;
+GRANT EXECUTE ON SCHEMA::dbo TO WisentoryManager;
 
 --Creamos la tabla "Users" para administrar el login.
 Drop table Users;
 CREATE TABLE Users (
     Id INT IDENTITY(1,1) PRIMARY KEY,
-    [Name] VARCHAR(20) NOT NULL CHECK (LEN([Name]) >= 4),
-    [Password] VARCHAR(20) NOT NULL CHECK (LEN([Password]) >= 4)
+    [Name] VARCHAR(20) NOT NULL UNIQUE CHECK (LEN([Name]) >= 4),
+    [Password] VARCHAR(20) NOT NULL UNIQUE CHECK (LEN([Password]) >= 4)
 );
 
 --Asignamos los usuarios.
@@ -33,10 +34,18 @@ CREATE TABLE Clients (
     Email VARCHAR(30) NOT NULL DEFAULT 'N/A',
 	PhoneNumber VARCHAR(10) NOT NULL DEFAULT 'N/A'
 );
-
+delete from clients;
 -- Asignamos los valores.
 INSERT INTO Clients ([Name], [LastName])
 VALUES ('Consumidor', 'Final');
+
+INSERT INTO Clients ([Name], [LastName], Email, PhoneNumber)
+VALUES ('John', 'Doe', 'john.doe@example.com', '1234567890'),
+    ('Alice', 'Smith', 'N/A', 'N/A'),
+    ('Bob', 'Johnson', 'N/A', 'N/A'),
+    ('Sam', 'Lil', 'N/A', 'N/A'),
+    ('Sarah', 'Brown', 'a-email-address@example.com', '1234567890');
+
 
 -- Creación de la tabla "Suppliers"
 Drop table Suppliers;
@@ -165,6 +174,14 @@ CREATE TABLE Bills (
 INSERT INTO Bills (ClientId, [Date])
 VALUES (1, GETDATE());
 
+INSERT INTO Bills (ClientId, [Date])
+VALUES (2, GETDATE()),
+(1002, GETDATE()),
+(1003, GETDATE()),
+(1004, GETDATE());
+
+
+
 -- Tabla BillDetail
 Drop table BillDetail;
 CREATE TABLE BillDetail (
@@ -225,6 +242,17 @@ INSERT INTO BillDetail (BillId, ProductId, Amount)
 VALUES (1, 1, 3),
        (1, 2, 5),
        (1, 3, 2);
+
+
+INSERT INTO BillDetail (BillId, ProductId, Amount)
+VALUES (4, 1, 3);
+
+INSERT INTO BillDetail (BillId, ProductId, Amount)
+VALUES (5, 1, 3);
+
+INSERT INTO BillDetail (BillId, ProductId, Amount)
+VALUES (6, 5, 3);
+
 
 
 
