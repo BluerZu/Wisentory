@@ -98,7 +98,6 @@ BEGIN
 END;
 
 
-
 DROP PROCEDURE GetPagedSuppliersOrders;
 
 CREATE PROCEDURE GetPagedSuppliersOrders
@@ -152,7 +151,12 @@ CREATE PROCEDURE SearchClients
     @email NVARCHAR(100) = NULL
 AS
 BEGIN
-    SELECT *
+    SELECT 
+        Id AS [Id],
+        [Name] AS [Nombre],
+        [LastName] AS [Apellido],
+        PhoneNumber AS [Número],
+        Email AS [Email]
     FROM Clients
     WHERE (@name IS NULL OR [Name] LIKE @name + '%')
       AND (@lastName IS NULL OR [LastName] LIKE @lastName + '%')
@@ -190,8 +194,38 @@ BEGIN
     VALUES (@Name, @LastName, @Email, @PhoneNumber);
 END
 
-EXEC InsertClient @Name = 'Kevin',@LastName = 'Poe',@Email = 'Kevinp@gmail.com';
+EXEC InsertClient @Name = 'Prueba',@LastName = 'Cinco';
+select * from clients;
 
+DROP PROCEDURE UpdateClient;
+CREATE PROCEDURE UpdateClient
+    @Id INT,
+    @Name NVARCHAR(30),
+    @LastName NVARCHAR(30),
+    @PhoneNumber NVARCHAR(10) = NULL,
+    @Email NVARCHAR(30) = NULL
+AS
+BEGIN
+    UPDATE Clients
+    SET
+        [Name] = @Name,
+        [LastName] = @LastName,
+        PhoneNumber = ISNULL(@PhoneNumber, 'N/A'),
+        Email = ISNULL(@Email, 'N/A')
+    WHERE
+        Id = @Id;
+END
+
+
+
+
+CREATE PROCEDURE DeleteClient
+    @id INT
+AS
+BEGIN
+    DELETE FROM Clients
+    WHERE Id = @id;
+END
 
 
 
