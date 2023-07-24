@@ -4,6 +4,7 @@ CREATE LOGIN WisentoryManager WITH PASSWORD = 'admin';
 
 --Creando un nuevo usuario para administrar la base de datos.
 USE WisentoryDB;
+
 CREATE USER WisentoryManager FOR LOGIN WisentoryManager;
 GRANT CONNECT SQL TO WFDB;
 
@@ -223,8 +224,11 @@ AS
 BEGIN
     DECLARE @BillId INT;
 
-    -- Obtener el ID de la factura afectada
-    SELECT @BillId = BillId FROM inserted;
+    -- Obtener el ID de la factura afectada (utilizando la tabla "inserted" para INSERT y UPDATE, y la tabla "deleted" para DELETE)
+    IF EXISTS (SELECT 1 FROM inserted)
+        SELECT @BillId = BillId FROM inserted;
+    ELSE IF EXISTS (SELECT 1 FROM deleted)
+        SELECT @BillId = BillId FROM deleted;
 
     -- Actualizar el campo "Total" en la tabla "Bill" con la suma de los "Subtotales"
     UPDATE Bills
@@ -235,6 +239,7 @@ BEGIN
     )
     WHERE Id = @BillId;
 END;
+
 
 -- Asignamos los valores.
 delete from BillDetail;
@@ -253,6 +258,14 @@ VALUES (5, 1, 3);
 INSERT INTO BillDetail (BillId, ProductId, Amount)
 VALUES (6, 5, 3);
 
+select * from bills
+
+select * from BillDetail
+
+INSERT INTO BillDetail (BillId, ProductId, Amount)
+VALUES (4, 1, 2);
+
+EXEC DeleteBillDetail @BillId = 4, @ProductId = 1;
 
 
 
