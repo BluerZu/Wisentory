@@ -113,6 +113,29 @@ CREATE TABLE OrderDetail (
     FOREIGN KEY (OrderId) REFERENCES Orders(Id),
     FOREIGN KEY (ProductId) REFERENCES Products(Id)
 );
+DROP TRIGGER trgInsteadOfInsertOrderDetail;
+
+CREATE TRIGGER trgInsteadOfInsertOrderDetail
+ON OrderDetail
+INSTEAD OF INSERT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- Realizar la actualización del Amount si ya existen registros con el mismo IdBill e IdProducto
+    UPDATE od
+    SET od.Amount = od.Amount + i.Amount,
+        od.Subtotal = od.UnitPrice * (od.Amount + i.Amount)
+    FROM OrderDetail od
+    JOIN inserted i ON od.ProductId = i.ProductId AND od.OrderId = i.OrderId;
+
+    -- Realizar la inserción de registros que no existen previamente en la tabla
+    INSERT INTO OrderDetail (OrderId, ProductId, Amount, UnitPrice, Subtotal)
+    SELECT i.OrderId, i.ProductId, i.Amount, i.UnitPrice, i.Amount * i.UnitPrice
+    FROM inserted i
+    LEFT JOIN OrderDetail bd ON i.ProductId = bd.ProductId AND i.OrderId = bd.OrderId
+    WHERE bd.ProductId IS NULL;
+END;
 
 --Creación de un trigger que calcule el subtotal en la tabla OrderDetail.
 DROP TRIGGER UpdateOrderSubtotal;
@@ -197,20 +220,31 @@ CREATE TABLE BillDetail (
 );
 
 
---Creación de un trigger que calcule el subtotal en la tabla BillDetail.
-DROP TRIGGER UpdateBillSubtotal;
 
-CREATE TRIGGER UpdateBillSubtotal
+
+--Creación de un trigger que calcule el subtotal en la tabla BillDetail.
+DROP TRIGGER trgInsteadOfInsertBillDetail;
+
+CREATE TRIGGER trgInsteadOfInsertBillDetail
 ON BillDetail
-AFTER INSERT, UPDATE
+INSTEAD OF INSERT
 AS
 BEGIN
-    UPDATE BD
-	SET BD.UnitPrice = P.SellPrice,
-        BD.Subtotal = CASE WHEN P.VAT = 'Y' THEN (P.SellPrice * BD.Amount) * 1.12 ELSE (P.SellPrice * BD.Amount) END
-    FROM BillDetail AS BD
-    INNER JOIN Products AS P ON BD.ProductId = P.Id
-    INNER JOIN inserted AS I ON BD.Id = I.Id;
+    SET NOCOUNT ON;
+
+    -- Realizar la actualización del Amount si ya existen registros con el mismo IdBill e IdProducto
+    UPDATE bd
+    SET bd.Amount = bd.Amount + i.Amount,
+        bd.Subtotal = bd.UnitPrice * (bd.Amount + i.Amount)
+    FROM BillDetail bd
+    JOIN inserted i ON bd.ProductId = i.ProductId AND bd.BillId = i.BillId;
+
+    -- Realizar la inserción de registros que no existen previamente en la tabla
+    INSERT INTO BillDetail (BillId, ProductId, Amount, UnitPrice, Subtotal)
+    SELECT i.BillId, i.ProductId, i.Amount, i.UnitPrice, i.Amount * i.UnitPrice
+    FROM inserted i
+    LEFT JOIN BillDetail bd ON i.ProductId = bd.ProductId AND i.BillId = bd.BillId
+    WHERE bd.ProductId IS NULL;
 END;
 
 
@@ -269,6 +303,13 @@ EXEC DeleteBillDetail @BillId = 4, @ProductId = 1;
 
 
 
+CREATE VIEW ProductInfo AS
+SELECT Id, [Name] AS Nombre
+FROM Products;
+
+CREATE VIEW SupplierInfo AS
+SELECT Id, [Name] AS Nombre
+FROM Suppliers;
 
 
 

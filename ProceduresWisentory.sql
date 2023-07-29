@@ -219,7 +219,7 @@ BEGIN
             Id = @Id;
     END TRY
     BEGIN CATCH
-        PRINT 'Existe un error inesperado. Posiblemente el id no sea correcto.';
+        RAISERROR('Ha ocurrido un error inesperado.', 16, 1);
     END CATCH
 END;
 
@@ -240,7 +240,7 @@ BEGIN
 		END
 	END TRY
 	BEGIN CATCH
-		PRINT 'Existe un error inesperado. Posiblemente el id no sea correcto.';
+		RAISERROR('No se puede borrar este cliente, porque está asociado a una factura, elimine todas las facturas con este cliente para borrarlo.', 16, 1);
     END CATCH
 END
 
@@ -274,9 +274,6 @@ BEGIN
 END;
 
 
-
-
-
 EXEC SearchBills @ClientId = '';
 
 EXEC SearchBills @Total = '8848', @Condition = 'S';
@@ -302,8 +299,7 @@ BEGIN
         VALUES (@Fecha, @IdCliente);
     END TRY
     BEGIN CATCH
-        -- Capturar la excepción y mostrar el mensaje de error personalizado
-        PRINT 'Existe un error inesperado. Posiblemente el id no sea correcto.';
+        RAISERROR('Ha ocurrido un error inesperado.', 16, 1);
     END CATCH
 END;
 
@@ -326,10 +322,11 @@ BEGIN
         WHERE Id = @Id;
     END TRY
     BEGIN CATCH
-        PRINT 'Existe un error inesperado. Posiblemente el id no sea correcto.';
+        RAISERROR('Ha ocurrido un error inesperado.', 16, 1);
     END CATCH
 END;
 
+DROP PROCEDURE DeleteBill;
 CREATE PROCEDURE DeleteBill
     @id INT
 AS
@@ -342,7 +339,7 @@ BEGIN
 		END
 	END TRY
 	BEGIN CATCH
-		PRINT 'Existe un error inesperado. Posiblemente el id no sea correcto.';
+		RAISERROR('Para borrar una factura, no debe tener ningún detalle.', 16, 1);
     END CATCH
 END
 
@@ -395,6 +392,7 @@ END;
 
 EXEC SearchBillDetail @BillId = 5, @ProductName = '',@ProductId='2';
 
+DROP PROCEDURE InsertBillDetail;
 CREATE PROCEDURE InsertBillDetail
     @BillId INT,
     @ProductId INT,
@@ -423,7 +421,7 @@ BEGIN
     END TRY
     BEGIN CATCH
         -- Capturar la excepción y mostrar el mensaje de error personalizado
-        PRINT 'Existe un error inesperado. Posiblemente el BillId o el ProductId no sean válidos.';
+        RAISERROR('Ha ocurrido un error inesperado.', 16, 1);
     END CATCH
 END;
 
@@ -460,12 +458,13 @@ BEGIN
 
     END TRY
     BEGIN CATCH
-        -- Capturar la excepción y mostrar el mensaje de error personalizado
-        PRINT 'Existe un error inesperado.';
+		RAISERROR('Ha ocurrido un error inesperado.', 16, 1);
     END CATCH
 END;
 
-EXEC UpdateBillDetail @BillId = 10, @ProductId = 1, @Amount = 5;
+EXEC UpdateBillDetail @BillId = 6, @ProductId = 1, @Amount = 1;
+select * from BillDetail
+where BillId =10;
 
 DROP PROCEDURE DeleteBillDetail;
 
@@ -489,11 +488,560 @@ BEGIN
 	END TRY
 	BEGIN CATCH
         -- Capturar la excepción y mostrar el mensaje de error personalizado
-        PRINT 'Existe un error inesperado.';
+        RAISERROR('Ha ocurrido un error inesperado.', 16, 1);
     END CATCH
 END;
 
 SELECT * FROM BillDetail WHERE Billid = 4;
 
 EXEC DeleteBillDetail @BillId = 4, @ProductId = 4;
+
+DROP PROCEDURE SearchSuppliers;
+CREATE PROCEDURE SearchSuppliers
+    @Id VARCHAR(10) = NULL,
+    @Name VARCHAR(30) = NULL,
+    @Email VARCHAR(30) = NULL,
+    @PhoneNumber VARCHAR(10) = NULL,
+    @Address VARCHAR(30) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT Id, [Name] as Nombre, Email, PhoneNumber as Número, [Address] as Dirección
+    FROM Suppliers
+    WHERE
+        (@Id IS NULL OR CONVERT(VARCHAR(10),Id) LIKE @Id + '%')
+        AND (@Name IS NULL OR [Name] LIKE @Name + '%')
+        AND (@Email IS NULL OR Email LIKE @Email+ '%')
+        AND (@PhoneNumber IS NULL OR PhoneNumber LIKE @PhoneNumber+ '%')
+        AND (@Address IS NULL OR [Address] LIKE @Address+ '%');
+END;
+
+EXEC SearchSuppliers @Id = '';
+
+DROP PROCEDURE InsertSupplier;
+CREATE PROCEDURE InsertSupplier
+    @Name VARCHAR(30),
+    @Email VARCHAR(30),
+    @PhoneNumber VARCHAR(10),
+    @Address VARCHAR(30)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    BEGIN TRY
+        -- Insertar el nuevo proveedor en la tabla "Suppliers"
+        INSERT INTO Suppliers ([Name], Email, PhoneNumber, [Address])
+        VALUES (@Name, @Email, @PhoneNumber, @Address);
+
+        PRINT 'Proveedor insertado correctamente.';
+    END TRY
+    BEGIN CATCH
+		RAISERROR('Ha ocurrido un error inesperado.', 16, 1);
+    END CATCH
+END;
+
+-- Ejemplo de uso del procedimiento para insertar un nuevo proveedor
+EXEC InsertSupplier @Name = 'Proveedor A', @Email = 'proveedorA@example.com', @PhoneNumber = '1234567890', @Address = 'Calle 123';
+
+DROP PROCEDURE UpdateSupplier;
+CREATE PROCEDURE UpdateSupplier
+    @Id INT,
+    @Name VARCHAR(30),
+    @Email VARCHAR(30),
+    @PhoneNumber VARCHAR(10),
+    @Address VARCHAR(30)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    BEGIN TRY
+        -- Verificar si el proveedor con el Id existe en la tabla "Suppliers"
+        IF NOT EXISTS (SELECT 1 FROM Suppliers WHERE Id = @Id)
+        BEGIN
+            RAISERROR('El Id del proveedor ingresado no es válido.', 16, 1);
+            RETURN; -- Salir del procedimiento sin actualizar el proveedor
+        END
+
+        -- Actualizar los datos del proveedor en la tabla "Suppliers"
+        UPDATE Suppliers
+        SET [Name] = @Name,
+            Email = @Email,
+            PhoneNumber = @PhoneNumber,
+            [Address] = @Address
+        WHERE Id = @Id;
+
+        PRINT 'Proveedor actualizado correctamente.';
+    END TRY
+    BEGIN CATCH
+		RAISERROR('Ha ocurrido un error inesperado.', 16, 1);
+    END CATCH
+END;
+
+EXEC UpdateSupplier @Id = 4, @Name = 'Proveedor B Modificado', @Email = 'proveedorA@example.com', @PhoneNumber = '1234567892', @Address = 'Calle B Modificada';
+
+DROP PROCEDURE DeleteSupplier;
+
+CREATE PROCEDURE DeleteSupplier
+    @Id INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    BEGIN TRY
+        -- Verificar si el proveedor con el Id existe en la tabla "Suppliers"
+        IF NOT EXISTS (SELECT 1 FROM Suppliers WHERE Id = @Id)
+        BEGIN
+            RAISERROR('El Id del proveedor ingresado no es válido.', 16, 1);
+            RETURN; -- Salir del procedimiento sin borrar el proveedor
+        END
+
+        -- Borrar el proveedor de la tabla "Suppliers"
+        DELETE FROM Suppliers WHERE Id = @Id;
+    END TRY
+    BEGIN CATCH
+        -- Capturar la excepción y mostrar el mensaje de error personalizado
+        RAISERROR('El proveedor está constando en algún producto, primero hay que borrar todos los productos con este proveedor, para borrarlo.', 16, 1);
+    END CATCH
+END;
+
+-- Ejemplo de uso del procedimiento para eliminar un proveedor con Id 1
+EXEC DeleteSupplier @Id = 1;
+
+CREATE PROCEDURE DeleteProductsBySupplierId
+    @SupplierId INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    BEGIN TRY
+        -- Iniciar la transacción
+        BEGIN TRANSACTION;
+
+        -- Verificar si el proveedor existe en la tabla "Suppliers"
+        IF NOT EXISTS (SELECT 1 FROM Suppliers WHERE Id = @SupplierId)
+        BEGIN
+            RAISERROR('El SupplierId ingresado no es válido.', 16, 1);
+            RETURN; -- Salir del procedimiento sin borrar los productos
+        END
+
+        -- Eliminar los productos asociados al proveedor
+        DELETE FROM Products WHERE SupplierId = @SupplierId;
+
+        -- Confirmar la transacción si no hubo errores
+        COMMIT TRANSACTION;
+
+        PRINT 'Productos eliminados correctamente.';
+    END TRY
+    BEGIN CATCH
+        -- Si ocurre un error, deshacer la transacción para que no se realicen los cambios en la base de datos
+        ROLLBACK TRANSACTION;
+
+        -- Capturar la excepción y mostrar el mensaje de error personalizado
+        RAISERROR('Ha ocurrido un error inesperado.', 16, 1);
+    END CATCH
+END;
+
+(@Date IS NULL OR CONVERT(NVARCHAR, B.[Date], 103) = @Date)
+        AND (@SupplierId IS NULL OR CONVERT(NVARCHAR(10), SupplierId) LIKE @SupplierId + '%')
+
+DROP PROCEDURE SearchOrders;
+
+CREATE PROCEDURE SearchOrders
+    @OrderId NVARCHAR(10) = NULL,
+    @SupplierId NVARCHAR(10) = NULL,
+    @Date NVARCHAR(10) = NULL,
+    @Status NVARCHAR(10) = NULL -- Nuevo parámetro para buscar por Estado
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT 
+        O.Id AS Id,
+        O.SupplierId AS IdProveedor,
+        S.Name AS NombreProveedor,
+        CONVERT(NVARCHAR,O.[Date],103) AS Fecha,
+        O.[Status] AS Estado,
+        O.Total
+    FROM Orders O
+    INNER JOIN Suppliers S ON O.SupplierId = S.Id
+    WHERE
+        (@OrderId IS NULL OR CONVERT(NVARCHAR,O.Id) LIKE @OrderId + '%')
+        AND (@SupplierId IS NULL OR CONVERT(NVARCHAR,O.SupplierId) LIKE @SupplierId + '%')
+        AND (@Date IS NULL OR CONVERT(NVARCHAR,O.[Date], 103) = @Date)
+        AND (@Status IS NULL OR O.[Status] = @Status); -- Nueva condición de búsqueda por Estado
+END;
+
+DROP PROCEDURE InsertOrder;
+CREATE PROCEDURE InsertOrder
+    @Date DATE,
+    @Status VARCHAR(10),
+    @SupplierId INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    BEGIN TRY
+        -- Verificar si el SupplierId existe en la tabla "Suppliers"
+        IF NOT EXISTS (SELECT 1 FROM Suppliers WHERE Id = @SupplierId)
+        BEGIN
+            RAISERROR('El SupplierId ingresado no es válido.', 16, 1);
+            RETURN; -- Salir del procedimiento sin insertar la orden
+        END
+
+        -- Verificar que el Status sea válido ('Pendiente', 'Entregado', 'Cancelado')
+        IF NOT (@Status IN ('Pendiente', 'Entregado', 'Cancelado'))
+        BEGIN
+            RAISERROR('El Status ingresado no es válido.', 16, 1);
+            RETURN; -- Salir del procedimiento sin insertar la orden
+        END
+
+        -- Insertar la orden en la tabla "Orders"
+        INSERT INTO Orders ([Date], [Status], SupplierId)
+        VALUES (@Date, @Status, @SupplierId);
+    END TRY
+    BEGIN CATCH
+        -- Capturar la excepción y mostrar el mensaje de error personalizado
+        RAISERROR('Ha ocurrido un error inesperado.', 16, 1);
+    END CATCH
+END;
+
+-- Ejemplo de uso del procedimiento para insertar una nueva orden
+EXEC InsertOrder @Date = '2023-07-23', @Status = 'Pendiente', @SupplierId = 4;
+
+DROP PROCEDURE UpdateOrder;
+
+CREATE PROCEDURE UpdateOrder
+    @OrderId INT,
+    @Date DATE,
+    @Status VARCHAR(10),
+    @SupplierId INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    BEGIN TRY
+        -- Verificar si el SupplierId existe en la tabla "Suppliers"
+        IF NOT EXISTS (SELECT 1 FROM Suppliers WHERE Id = @SupplierId)
+        BEGIN
+            RAISERROR('El SupplierId ingresado no es válido.', 16, 1);
+            RETURN; -- Salir del procedimiento sin modificar la orden
+        END
+
+        -- Verificar que el Status sea válido ('Pendiente', 'Entregado', 'Cancelado')
+        IF NOT (@Status IN ('Pendiente', 'Entregado', 'Cancelado'))
+        BEGIN
+            RAISERROR('El Status ingresado no es válido.', 16, 1);
+            RETURN; -- Salir del procedimiento sin modificar la orden
+        END
+
+        -- Verificar si la orden con el OrderId existe en la tabla "Orders"
+        IF NOT EXISTS (SELECT 1 FROM Orders WHERE Id = @OrderId)
+        BEGIN
+            RAISERROR('El OrderId ingresado no es válido.', 16, 1);
+            RETURN; -- Salir del procedimiento sin modificar la orden
+        END
+
+        -- Actualizar la orden en la tabla "Orders"
+        UPDATE Orders
+        SET [Date] = @Date,
+            [Status] = @Status,
+            SupplierId = @SupplierId
+        WHERE Id = @OrderId;
+
+    END TRY
+    BEGIN CATCH
+        RAISERROR('Ha ocurrido un error inesperado.', 16, 1);
+    END CATCH
+END;
+
+-- Ejemplo de uso del procedimiento para modificar una orden con OrderId 1
+EXEC UpdateOrder @OrderId = 3, @Date = '2023-07-24', @Status = 'Entregado', @SupplierId = 3;
+
+DROP PROCEDURE DeleteOrder;
+
+CREATE PROCEDURE DeleteOrder
+    @Id INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    BEGIN TRY
+        -- Verificar si la orden con el OrderId existe en la tabla "Orders"
+        IF NOT EXISTS (SELECT 1 FROM Orders WHERE Id = @Id)
+        BEGIN
+            RAISERROR('El OrderId ingresado no es válido.', 16, 1);
+            RETURN; -- Salir del procedimiento sin borrar la orden
+        END
+
+        -- Eliminar la orden de la tabla "Orders"
+        DELETE FROM Orders WHERE Id =  @Id;
+    END TRY
+    BEGIN CATCH
+        -- Capturar la excepción y mostrar el mensaje de error personalizado
+        RAISERROR('Para borrar una orden, su detalle debe estar vacío.', 16, 1);
+    END CATCH
+END;
+
+DROP PROCEDURE SearchProducts;
+
+CREATE PROCEDURE SearchProducts
+    @Id VARCHAR(10) = NULL,
+    @Name VARCHAR(30) = NULL,
+    @Description VARCHAR(100) = NULL,
+    @VAT VARCHAR(1) = NULL,
+    @BuyPrice DECIMAL(10, 2) = NULL,
+    @SellPrice DECIMAL(10, 2) = NULL,
+    @Stock INT = NULL, -- Nuevo parámetro para buscar por Stock
+    @SupplierId INT = NULL -- Nuevo parámetro para buscar por SupplierId
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT 
+        Id AS Id,
+        [Name] AS Nombre,
+        [Description] AS Descripción,
+        CASE VAT
+            WHEN 'Y' THEN 'Sí'
+            WHEN 'N' THEN 'No'
+        END AS Impuesto,
+        BuyPrice AS PrecioCompra,
+        SellPrice AS PrecioVenta,
+        Stock,
+        SupplierId AS IdProveedor
+    FROM Products
+    WHERE
+        (@Id IS NULL OR CONVERT(NVARCHAR,Id) LIKE @Id + '%')
+        AND (@Name IS NULL OR [Name] LIKE @Name + '%')
+        AND (@Description IS NULL OR [Description] LIKE @Description + '%')
+        AND (@VAT IS NULL OR VAT LIKE @VAT + '%')
+        AND (@BuyPrice IS NULL OR BuyPrice = @BuyPrice)
+        AND (@SellPrice IS NULL OR SellPrice = @SellPrice)
+        AND (@Stock IS NULL OR Stock = @Stock) -- Condición para buscar por Stock
+        AND (@SupplierId IS NULL OR SupplierId = @SupplierId); -- Condición para buscar por SupplierId
+END;
+
+
+EXEC SearchProducts @SupplierId = 1;
+
+DROP PROCEDURE InsertProduct;
+
+CREATE PROCEDURE InsertProduct
+    @Name VARCHAR(40),
+    @Description VARCHAR(100),
+    @VAT VARCHAR(1),
+    @BuyPrice DECIMAL(10, 2),
+    @SellPrice DECIMAL(10, 2),
+    @Stock INT,
+    @SupplierId INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    BEGIN TRY
+        INSERT INTO Products ([Name], [Description], VAT, BuyPrice, SellPrice, Stock, SupplierId)
+        VALUES (@Name, @Description, @VAT, @BuyPrice, @SellPrice, @Stock, @SupplierId);
+    END TRY
+    BEGIN CATCH
+        RAISERROR('Ha ocurrido un error inesperado.', 16, 1);
+    END CATCH;
+END;
+
+EXEC InsertProduct
+    @Name = 'Producto de ejemplo 1',
+    @Description = 'Este es un producto de ejemplo para demostración 1',
+    @VAT = 'N',
+    @BuyPrice = 150.00,
+    @SellPrice = 180.00,
+    @Stock = 10,
+    @SupplierId = 3;
+
+
+USE WisentoryDB;
+DROP PROCEDURE UpdateProduct;
+CREATE PROCEDURE UpdateProduct
+    @Id INT,
+    @Name VARCHAR(30),
+    @Description VARCHAR(100),
+    @VAT VARCHAR(1),
+    @BuyPrice DECIMAL(10, 2),
+    @SellPrice DECIMAL(10, 2),
+    @Stock INT,
+    @SupplierId INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    BEGIN TRY
+        UPDATE Products
+        SET
+            [Name] = @Name,
+            [Description] = @Description,
+            VAT = @VAT,
+            BuyPrice = @BuyPrice,
+            SellPrice = @SellPrice,
+            Stock = @Stock,
+            SupplierId = @SupplierId
+        WHERE Id = @Id;
+    END TRY
+    BEGIN CATCH
+        RAISERROR('Ha ocurrido un error inesperado.', 16, 1);
+    END CATCH;
+END;
+
+DROP PROCEDURE DeleteProduct;
+CREATE PROCEDURE DeleteProduct
+    @Id INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    BEGIN TRY
+        DELETE FROM Products
+        WHERE Id = @Id;
+    END TRY
+    BEGIN CATCH
+        RAISERROR('Para borrar este producto primero debe borrarlo todos los detalle factura dónde aparezca.', 16, 1);
+    END CATCH;
+END;
+
+EXEC DeleteProduct
+    @Id = 1;
+
+DROP PROCEDURE SearchOrderDetail;
+
+CREATE PROCEDURE SearchOrderDetail
+    @OrderId INT,
+    @ProductId NVARCHAR(10) = NULL,
+    @ProductName NVARCHAR(30) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT
+        P.Id AS IdProducto,
+        P.[Name] AS NombreProducto,
+        SUM(OD.Amount) AS Cantidad,
+        P.SellPrice AS PrecioUnitario,
+        SUM(OD.Subtotal) AS Subtotal
+    FROM
+        OrderDetail OD
+    INNER JOIN
+        Products P ON OD.ProductId = P.Id
+    WHERE
+        OD.OrderId = @OrderId
+        AND (@ProductId IS NULL OR CONVERT(NVARCHAR(10), P.Id) LIKE @ProductId + '%')
+        AND (@ProductName IS NULL OR P.[Name] LIKE @ProductName + '%')
+    GROUP BY
+        OD.OrderId,
+        P.Id,
+        P.[Name],
+        P.SellPrice
+END;
+
+EXEC SearchOrderDetail @OrderId = 1, @ProductName = 'Lap';
+
+DROP PROCEDURE InsertOrderDetail;
+
+CREATE PROCEDURE InsertOrderDetail
+    @OrderId INT,
+    @ProductId INT,
+    @Amount INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    BEGIN TRY
+        -- Verificar si el BillId existe en la tabla "Bills"
+        IF NOT EXISTS (SELECT 1 FROM Orders WHERE Id = @OrderId)
+        BEGIN
+            RAISERROR('El OrderId ingresado no es válido.', 16, 1);
+            RETURN; -- Salir del procedimiento sin insertar el detalle de la factura
+        END
+
+        -- Verificar si el ProductId existe en la tabla "Products"
+        IF NOT EXISTS (SELECT 1 FROM Products WHERE Id = @ProductId)
+        BEGIN
+            RAISERROR('El ProductId ingresado no es válido.', 16, 1);
+            RETURN; -- Salir del procedimiento sin insertar el detalle de la factura
+        END
+        -- Insertar el detalle de la factura en la tabla "BillDetail"
+        INSERT INTO OrderDetail (OrderId, ProductId, Amount)
+        VALUES (@OrderId, @ProductId, @Amount);
+
+    END TRY
+    BEGIN CATCH
+        -- Capturar la excepción y mostrar el mensaje de error personalizado
+        RAISERROR('Ha ocurrido un error inesperado.', 16, 1);
+    END CATCH
+END;
+select * from orderdetail
+select * from products
+
+EXEC InsertOrderDetail @OrderId = 2, @ProductId = 3, @Amount = 2;
+
+DROP PROCEDURE UpdateOrderDetail;
+
+CREATE PROCEDURE UpdateOrderDetail
+    @OrderId INT,
+    @ProductId INT,
+    @Amount INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    BEGIN TRY
+        -- Verificar si el BillId existe en la tabla "Bills"
+        IF NOT EXISTS (SELECT 1 FROM Orders WHERE Id = @OrderId)
+        BEGIN
+            RAISERROR('El OrderId ingresado no es válido.', 16, 1);
+            RETURN; -- Salir del procedimiento sin actualizar el detalle de la factura
+        END
+
+        -- Verificar si el ProductId existe en la tabla "Products"
+        IF NOT EXISTS (SELECT 1 FROM Products WHERE Id = @ProductId)
+        BEGIN
+            RAISERROR('El ProductId ingresado no es válido.', 16, 1);
+            RETURN; -- Salir del procedimiento sin actualizar el detalle de la factura
+        END
+
+        -- Actualizar el detalle de la factura en la tabla "BillDetail"
+        UPDATE OrderDetail
+        SET Amount = @Amount
+        WHERE OrderId = @OrderId AND ProductId = @ProductId;
+
+    END TRY
+    BEGIN CATCH
+		DECLARE @ErrorMessage NVARCHAR(4000) = 'Ha ocurrido un error inesperado. ' + ERROR_MESSAGE();
+        RAISERROR(@ErrorMessage, 16, 1);
+    END CATCH
+END;
+
+EXEC UpdateOrderDetail @OrderId = 2, @ProductId = 3, @Amount = 10;
+
+
+DROP PROCEDURE DeleteOrderDetail;
+
+CREATE PROCEDURE DeleteOrderDetail
+	@OrderId INT,
+    @ProductId INT
+AS
+BEGIN
+	SET NOCOUNT ON;
+	BEGIN TRY    
+
+    -- Verificar si el IdProducto existe en la tabla "Products"
+    IF NOT EXISTS (SELECT 1 FROM Products WHERE Id = @ProductId)
+    BEGIN
+        RAISERROR('El IdProducto ingresado no es válido.', 16, 1);
+        RETURN; -- Salir del procedimiento sin borrar los registros
+    END
+
+    -- Borrar los registros de BillDetail que corresponden al IdProducto
+    DELETE FROM OrderDetail WHERE Orderid = @OrderId AND ProductId = @ProductId;
+	END TRY
+	BEGIN CATCH
+        -- Capturar la excepción y mostrar el mensaje de error personalizado
+        RAISERROR('Ha ocurrido un error inesperado.', 16, 1);
+    END CATCH
+END;
+
+SELECT * FROM OrderDetail WHERE Orderid = 2;
+
+EXEC DeleteOrderDetail @OrderId = 2, @ProductId = 3;
+
+
+
+
 
